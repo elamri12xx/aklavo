@@ -15,7 +15,7 @@ export default {
     }
 
     const res = await fetch(
-      `https://kadar.reda-stream.eu.org/live/d49dc02ec79b/k5cfhnm1/5835.m3u8/${id}.m3u8`,
+      `https://kadar.reda-stream.eu.org/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`,
       {
         redirect: "follow",
         headers: {
