@@ -58,7 +58,7 @@ export default {
 
     return new Response(out.join("\n"), {
       headers: {
-        "Content-Type": "application/vnd.apple.mpegurl",
+        "Content-Type": "text/plain; charset=utf-8",
         "Access-Control-Allow-Origin": "*"
       }
     });
