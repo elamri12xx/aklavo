@@ -6,11 +6,9 @@ export default {
 
       let id = "";
 
+      // نفس $_GET['id']
       if (path.startsWith("/files/cc/") && path.endsWith(".m3u8")) {
-        id = path
-          .replace("/files/cc/", "")
-          .replace(".m3u8", "")
-          .trim();
+        id = path.replace("/files/cc/", "").replace(".m3u8", "");
       }
 
       if (!id) {
@@ -18,84 +16,86 @@ export default {
       }
 
       const targetUrl =
-        `http://bouygues-cdn.r1v.us:8080/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`;
+        `http://look4k.com:80/live/0132221576/98324721/${id}.m3u8`;
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
-
+      // نفس cURL
       const res = await fetch(targetUrl, {
         method: "GET",
         redirect: "follow",
-        signal: controller.signal,
         headers: {
           "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-          "Accept": "*/*",
-          "Connection": "keep-alive"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         }
       });
 
-      clearTimeout(timeout);
-
-      if (!res.ok) {
-        return new Response("Upstream status: " + res.status, {
-          status: 502
-        });
+      if (!res) {
+        return new Response("Request failed", { status: 500 });
       }
 
       const responseText = await res.text();
+
+      // نفس CURL_EFFECTIVE_URL
       const finalUrl = res.url;
-
       const parsed = new URL(finalUrl);
-      const base = parsed.origin;
 
+      let base = parsed.protocol + "//" + parsed.hostname;
+      if (parsed.port) {
+        base += ":" + parsed.port;
+      }
+
+      // نفس json decode
       let playlist = responseText.trim();
 
       try {
         const json = JSON.parse(responseText);
         if (json.data) {
-          playlist = String(json.data).trim();
+          playlist = json.data.trim();
         }
       } catch (e) {}
 
+      // نفس EXT check
       if (!playlist.startsWith("#EXTM3U")) {
         playlist = "#EXTM3U\n" + playlist;
       }
 
+      // نفس preg_replace_callback
       const lines = playlist.split(/\r?\n/);
-      const output = [];
+      const out = [];
 
-      for (const line of lines) {
-        const trim = line.trim();
+      for (let line of lines) {
+        let l = line.trim();
 
-        if (!trim || trim.startsWith("#")) {
-          output.push(line);
+        if (l === "") {
+          out.push(l);
           continue;
         }
 
-        if (
-          trim.startsWith("http://") ||
-          trim.startsWith("https://")
-        ) {
-          output.push(trim);
-        } else {
-          output.push(base + "/" + trim.replace(/^\/+/, ""));
+        if (l.startsWith("#")) {
+          out.push(l);
+          continue;
         }
+
+        if (l.startsWith("http://") || l.startsWith("https://")) {
+          out.push(l);
+          continue;
+        }
+
+        if (l.startsWith("/") || !l.includes("://")) {
+          out.push(base + "/" + l.replace(/^\/+/, ""));
+          continue;
+        }
+
+        out.push(l);
       }
 
-      return new Response(output.join("\n"), {
+      return new Response(out.join("\n"), {
         headers: {
-          "Content-Type":
-            "application/vnd.apple.mpegurl; charset=utf-8",
-          "Access-Control-Allow-Origin": "*",
-          "Cache-Control": "no-store"
+          "Content-Type": "text/plain; charset=utf-8"
         }
       });
 
     } catch (err) {
-      return new Response("Error: " + err.message, {
-        status: 500
-      });
+      return new Response(err.message, { status: 500 });
     }
   }
 };
