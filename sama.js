@@ -1,66 +1,61 @@
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-
-    let id = "";
-
-    if (url.pathname.startsWith("/files/cc/") && url.pathname.endsWith(".m3u8")) {
-      id = url.pathname
-        .replace("/files/cc/", "")
-        .replace(".m3u8", "");
-    }
+    const id = url.searchParams.get("id");
 
     if (!id) {
       return new Response("Missing id", { status: 400 });
     }
 
-    const res = await fetch(
-      `https://kadar.reda-stream.eu.org/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`,
-      {
-        redirect: "follow",
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36"
-        }
-      }
-    );
+    const source =
+      `https://kadar.reda-stream.eu.org/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`;
 
+    const res = await fetch(source, {
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
+
+    const finalUrl = res.url;
     const text = await res.text();
 
-    const finalUrl = new URL(res.url);
-    const base = finalUrl.origin;
+    const base = finalUrl.substring(0, finalUrl.lastIndexOf("/") + 1);
 
-    let playlist = text;
+    const lines = text.split("\n");
+    const output = [];
 
-    try {
-      const json = JSON.parse(text);
-      if (json.data) playlist = json.data;
-    } catch {}
+    for (const line of lines) {
+      const l = line.trim();
+
+      if (!l) {
+        output.push("");
+        continue;
+      }
+
+      if (l.startsWith("#")) {
+        output.push(l);
+        continue;
+      }
+
+      if (l.startsWith("http")) {
+        output.push(l);
+      } else {
+        output.push(base + l.replace(/^\/+/, ""));
+      }
+    }
+
+    let playlist = output.join("\n");
 
     if (!playlist.startsWith("#EXTM3U")) {
       playlist = "#EXTM3U\n" + playlist;
     }
 
-    const lines = playlist.split("\n");
-    const out = [];
-
-    for (const line of lines) {
-      const l = line.trim();
-
-      if (!l || l.startsWith("#")) {
-        out.push(line);
-      } else if (l.startsWith("http")) {
-        out.push(l);
-      } else {
-        out.push(base + "/" + l.replace(/^\/+/, ""));
-      }
-    }
-
-    return new Response(out.join("\n"), {
+    return new Response(playlist, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Access-Control-Allow-Origin": "*"
       }
     });
   }
-};
+}
