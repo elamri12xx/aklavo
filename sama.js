@@ -7,7 +7,7 @@ export default {
       return new Response("Missing id", { status: 400 });
     }
 
-    const targetUrl = `https://kadar.reda-stream.eu.org/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`;
+    const targetUrl = `http://kadar.reda-stream.eu.org:8080/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`;
 
     const response = await fetch(targetUrl, {
       method: "GET",
