@@ -13,7 +13,10 @@ export default {
     const res = await fetch(source, {
       redirect: "follow",
       headers: {
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36",
+        "Referer": "https://reda-stream.eu.org/",
+        "Origin": "https://reda-stream.eu.org"
       }
     });
 
@@ -26,7 +29,7 @@ export default {
     const output = [];
 
     for (const line of lines) {
-      const l = line.trim();
+      let l = line.trim();
 
       if (!l) {
         output.push("");
@@ -38,15 +41,26 @@ export default {
         continue;
       }
 
+      // حذف error code إذا موجود
+      if (l.includes("/error code")) {
+        l = l.split("/error code")[0].trim();
+      }
+
+      // تجاهل أي سطر أصبح فارغ
+      if (!l) continue;
+
+      // إذا رابط مباشر
       if (l.startsWith("http")) {
         output.push(l);
       } else {
+        // تحويل النسبي إلى مطلق
         output.push(base + l.replace(/^\/+/, ""));
       }
     }
 
     let playlist = output.join("\n");
 
+    // إضافة EXTM3U إذا ناقصة
     if (!playlist.startsWith("#EXTM3U")) {
       playlist = "#EXTM3U\n" + playlist;
     }
@@ -54,7 +68,8 @@ export default {
     return new Response(playlist, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
-        "Access-Control-Allow-Origin": "*"
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store"
       }
     });
   }
