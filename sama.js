@@ -7,22 +7,27 @@ export default {
       return new Response("Missing id", { status: 400 });
     }
 
-    const url = `https://kadar.reda-stream.eu.org/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`;
+    const targetUrl = `https://kadar.reda-stream.eu.org/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`;
 
-    let response;
-    try {
-      response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        }
+    const response = await fetch(targetUrl, {
+      method: "GET",
+      redirect: "follow",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://google.com/"
+      }
+    });
+
+    if (!response.ok) {
+      return new Response(`Origin Error: ${response.status}`, {
+        status: response.status
       });
-    } catch (err) {
-      return new Response(err.message, { status: 500 });
     }
 
-    const finalUrl = response.url;
+    let finalUrl = response.url;
     const parsed = new URL(finalUrl);
 
     let base = `${parsed.protocol}//${parsed.hostname}`;
@@ -30,7 +35,7 @@ export default {
 
     let playlist = await response.text();
 
-    // إذا كان JSON
+    // لو JSON
     try {
       const json = JSON.parse(playlist);
       if (json?.data) playlist = json.data;
@@ -44,23 +49,19 @@ export default {
 
     playlist = playlist.replace(/^(?!#)(.+)$/gm, (line) => {
       line = line.trim();
-
       if (!line) return line;
 
       if (line.startsWith("http://") || line.startsWith("https://")) {
         return line;
       }
 
-      if (line.startsWith("/") || !line.includes("://")) {
-        return base + "/" + line.replace(/^\/+/, "");
-      }
-
-      return line;
+      return base + "/" + line.replace(/^\/+/, "");
     });
 
     return new Response(playlist, {
       headers: {
-        "Content-Type": "text/plain; charset=utf-8"
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store"
       }
     });
   }
