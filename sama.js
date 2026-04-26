@@ -2,23 +2,16 @@ export default {
   async fetch(request) {
     try {
       const url = new URL(request.url);
-      const path = url.pathname;
-
-      let id = "";
-
-      // نفس $_GET['id']
-      if (path.startsWith("/files/cc/") && path.endsWith(".m3u8")) {
-        id = path.replace("/files/cc/", "").replace(".m3u8", "");
-      }
+      const id = url.searchParams.get("id");
 
       if (!id) {
         return new Response("Missing id", { status: 400 });
       }
 
       const targetUrl =
-        `http://bouygues-cdn.r1v.us:8080/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`;
+        `http://look4k.com:80/live/0132221576/98324721/${id}.m3u8`;
 
-      // نفس cURL
+      // CURL INIT + OPTIONS
       const res = await fetch(targetUrl, {
         method: "GET",
         redirect: "follow",
@@ -32,33 +25,35 @@ export default {
         return new Response("Request failed", { status: 500 });
       }
 
+      // CURL EXEC RESPONSE
       const responseText = await res.text();
 
-      // نفس CURL_EFFECTIVE_URL
+      // EFFECTIVE URL (like curl_getinfo)
       const finalUrl = res.url;
-      const parsed = new URL(finalUrl);
+      const parts = new URL(finalUrl);
 
-      let base = parsed.protocol + "//" + parsed.hostname;
-      if (parsed.port) {
-        base += ":" + parsed.port;
-      }
+      let base = parts.protocol + "//" + parts.hostname;
+      if (parts.port) base += ":" + parts.port;
 
-      // نفس json decode
-      let playlist = responseText.trim();
+      // json_decode($response, true)
+      let playlist = responseText;
 
       try {
         const json = JSON.parse(responseText);
-        if (json.data) {
-          playlist = json.data.trim();
+        if (json && json.data) {
+          playlist = json.data;
         }
-      } catch (e) {}
+      } catch (e) {
+        // fallback raw response
+      }
 
-      // نفس EXT check
+      playlist = playlist.trim();
+
       if (!playlist.startsWith("#EXTM3U")) {
         playlist = "#EXTM3U\n" + playlist;
       }
 
-      // نفس preg_replace_callback
+      // preg_replace_callback equivalent
       const lines = playlist.split(/\r?\n/);
       const out = [];
 
@@ -95,7 +90,7 @@ export default {
       });
 
     } catch (err) {
-      return new Response(err.message, { status: 500 });
+      return new Response("Error: " + err.message, { status: 500 });
     }
   }
 };
