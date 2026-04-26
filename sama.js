@@ -18,10 +18,10 @@ export default {
       }
 
       const targetUrl =
-        `http://look4k.com:80/live/0132221576/98324721/${id}.m3u8`;
+        `http://look4k.com/live/0132221576/98324721/${id}.m3u8`;
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(() => controller.abort(), 30000);
 
       const res = await fetch(targetUrl, {
         method: "GET",
