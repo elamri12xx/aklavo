@@ -15,19 +15,25 @@ export default {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "*/*",
+        "Accept": "application/vnd.apple.mpegurl, application/x-mpegURL, */*",
         "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
         "Referer": "https://google.com/"
       }
     });
 
     if (!response.ok) {
-      return new Response(`Origin Error: ${response.status}`, {
-        status: response.status
-      });
+      return new Response(
+        `Origin Error: ${response.status}`,
+        { status: response.status }
+      );
     }
 
-    let finalUrl = response.url;
+    const finalUrl = response.url;
     const parsed = new URL(finalUrl);
 
     let base = `${parsed.protocol}//${parsed.hostname}`;
@@ -35,7 +41,7 @@ export default {
 
     let playlist = await response.text();
 
-    // لو JSON
+    // دعم JSON لو موجود
     try {
       const json = JSON.parse(playlist);
       if (json?.data) playlist = json.data;
@@ -49,9 +55,13 @@ export default {
 
     playlist = playlist.replace(/^(?!#)(.+)$/gm, (line) => {
       line = line.trim();
+
       if (!line) return line;
 
-      if (line.startsWith("http://") || line.startsWith("https://")) {
+      if (
+        line.startsWith("http://") ||
+        line.startsWith("https://")
+      ) {
         return line;
       }
 
