@@ -16,7 +16,7 @@ export default {
       }
 
       const targetUrl =
-        `http://look4k.com:80/live/0132221576/98324721/${id}.m3u8`;
+        `http://bouygues-cdn.r1v.us:8080/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`;
 
       // نفس cURL
       const res = await fetch(targetUrl, {
