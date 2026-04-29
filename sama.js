@@ -1,9 +1,13 @@
-export async function onRequest() {
+addEventListener("fetch", event => {
+  event.respondWith(handle(event.request));
+});
+
+async function handle(request) {
   return new Response(
-    JSON.stringify({ status: "ok", message: "function is working" }),
+    JSON.stringify({ status: "ok", message: "worker is working" }),
     {
       headers: {
-        "Content-Type": "application/json; charset=utf-8"
+        "Content-Type": "application/json"
       }
     }
   );
