@@ -1,78 +1,93 @@
-export default {
-  async fetch(request) {
+export async function onRequest(context) {
+  try {
+    const { request } = context;
     const urlObj = new URL(request.url);
-    const id = urlObj.searchParams.get("id");
+    const targetUrl = urlObj.searchParams.get("url");
 
-    if (!id) {
-      return new Response("Missing id", { status: 400 });
-    }
-
-    const targetUrl = `http://kadar.reda-stream.eu.org:8080/live/d49dc02ec79b/k5cfhnm1/${id}.m3u8`;
-
-    const response = await fetch(targetUrl, {
-      method: "GET",
-      redirect: "follow",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "application/vnd.apple.mpegurl, application/x-mpegURL, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "cross-site",
-        "Referer": "https://google.com/"
-      }
-    });
-
-    if (!response.ok) {
+    if (!targetUrl) {
       return new Response(
-        `Origin Error: ${response.status}`,
-        { status: response.status }
+        JSON.stringify({ error: "missing url" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8"
+          }
+        }
       );
     }
 
-    const finalUrl = response.url;
-    const parsed = new URL(finalUrl);
+    const apiUrl =
+      "https://token.easybroadcast.io/all?url=" +
+      encodeURIComponent(targetUrl);
 
-    let base = `${parsed.protocol}//${parsed.hostname}`;
-    if (parsed.port) base += `:${parsed.port}`;
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Referer": "https://snrtlive.ma/",
+        "Accept": "application/json,text/javascript,*/*;q=0.01"
+      }
+    });
 
-    let playlist = await response.text();
+    const text = await response.text();
 
-    // دعم JSON لو موجود
-    try {
-      const json = JSON.parse(playlist);
-      if (json?.data) playlist = json.data;
-    } catch (e) {}
-
-    playlist = playlist.trim();
-
-    if (!playlist.startsWith("#EXTM3U")) {
-      playlist = "#EXTM3U\n" + playlist;
+    if (!response.ok) {
+      return new Response(
+        JSON.stringify({
+          error: "failed to get token",
+          detail: text
+        }),
+        {
+          status: 502,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8"
+          }
+        }
+      );
     }
 
-    playlist = playlist.replace(/^(?!#)(.+)$/gm, (line) => {
-      line = line.trim();
+    const data = new URLSearchParams(text);
 
-      if (!line) return line;
+    if ([...data.keys()].length > 0) {
+      const token = data.get("token") || "";
+      const tokenPath = data.get("token_path") || "";
+      const expires = data.get("expires") || "";
 
-      if (
-        line.startsWith("http://") ||
-        line.startsWith("https://")
-      ) {
-        return line;
+      const cleanResponse =
+        `token=${token}` +
+        `&token_path=${encodeURIComponent(tokenPath)}` +
+        `&expires=${expires}`;
+
+      return new Response(cleanResponse, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8"
+        }
+      });
+    }
+
+    return new Response(
+      JSON.stringify({ raw_response: text }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8"
+        }
       }
-
-      return base + "/" + line.replace(/^\/+/, "");
-    });
-
-    return new Response(playlist, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-store"
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: "internal server error",
+        detail: error.message
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8"
+        }
       }
-    });
+    );
   }
-};
+          }
